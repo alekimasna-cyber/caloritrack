@@ -4,16 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CaloriTrack</title>
-    <!-- Manifiesto integrado para PWABuilder -->
-    <link rel="manifest" href="data:application/manifest+json,{
-        %22name%22: %22CaloriTrack%22,
-        %22short_name%22: %22CaloriTrack%22,
-        %22start_url%22: %22/%22,
-        %22display%22: %22standalone%22,
-        %22background_color%22: %22%230f172a%22,
-        %22theme_color%22: %22%2310b981%22,
-        %22icons%22: []
-    }">
+    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#10b981">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -164,7 +155,7 @@
                 setTimeout(() => {
                     const samples = [
                         { name: "Pollo a la brasa con papas", cals: 750, type: "Almuerzo", macros: "P: 45g | C: 60g | G: 32g" },
-                        let name = "Lomo Saltado con arroz", cals: 680, type: "Almuerzo", macros: "P: 38g | C: 65g | G: 26g" },
+                        { name: "Lomo Saltado con arroz", cals: 680, type: "Almuerzo", macros: "P: 38g | C: 65g | G: 26g" },
                         { name: "Desayuno con pan, huevo y café", cals: 380, type: "Desayuno", macros: "P: 18g | C: 40g | G: 14g" },
                         { name: "Ensalada mixta con atún", cals: 320, type: "Almuerzo", macros: "P: 30g | C: 12g | G: 15g" }
                     ];
