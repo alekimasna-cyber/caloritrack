@@ -1,0 +1,11 @@
+{
+  "background_color": "#a22929",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "CaloriTrack",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "CaloriTrack",
+  "start_url": "/",
+  "theme_color": "#ffffff"
+}
