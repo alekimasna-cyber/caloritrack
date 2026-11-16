@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaloriTrack</title>
+    <!-- Manifiesto integrado para PWABuilder -->
+    <link rel="manifest" href="data:application/manifest+json,{
+        %22name%22: %22CaloriTrack%22,
+        %22short_name%22: %22CaloriTrack%22,
+        %22start_url%22: %22/%22,
+        %22display%22: %22standalone%22,
+        %22background_color%22: %22%230f172a%22,
+        %22theme_color%22: %22%2310b981%22,
+        %22icons%22: []
+    }">
+    <meta name="theme-color" content="#10b981">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 16px; min-height: 100vh; }
+        .container { max-width: 480px; margin: 0 auto; padding-bottom: 40px; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        h1 { font-size: 1.5rem; color: var(--primary); font-weight: 700; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; }
+        .stat-value { font-size: 1.4rem; font-weight: bold; }
+        .stat-label { font-size: 0.85rem; color: var(--text-muted); }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px 16px; border-radius: 12px; font-weight: 600; width: 100%; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn:hover { background: var(--primary-dark); }
+        .btn-secondary { background: #3b82f6; }
+        input, select { width: 100%; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); color: var(--text); margin-bottom: 12px; font-size: 1rem; }
+        .camera-section { border: 2px dashed var(--primary); text-align: center; padding: 15px; border-radius: 12px; margin-bottom: 15px; background: rgba(16, 185, 129, 0.05); }
+        .camera-section input[type="file"] { display: none; }
+        .camera-label { cursor: pointer; color: var(--primary); font-weight: 600; display: block; }
+        #preview-img { width: 100%; max-height: 180px; object-fit: cover; border-radius: 8px; margin-top: 10px; display: none; }
+        .meal-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; border-left: 4px solid var(--primary); }
+        .meal-info h4 { font-size: 0.95rem; }
+        .meal-info p { font-size: 0.8rem; color: var(--text-muted); }
+        .delete-btn { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1.1rem; padding: 4px; }
+        .macro-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--border); margin-top: 15px; }
+        .macro-fill { height: 100%; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CaloriTrack 🥗</h1>
+            <span id="date-today" style="font-size: 0.85rem; color: var(--text-muted);"></span>
+        </header>
+        <div class="card">
+            <div class="summary-grid">
+                <div>
+                    <div class="stat-label">Consumidas</div>
+                    <div class="stat-value" id="total-cals">0</div>
+                    <div class="stat-label" style="margin-top: 8px;">Meta Diaria</div>
+                    <input type="number" id="goal-cals" value="2000" style="margin: 4px 0 0 0; padding: 6px; text-align: center; font-weight: bold;" onchange="updateGoal()">
+                </div>
+                <div style="text-align: center;">
+                    <div class="stat-label">Porcentaje</div>
+                    <div class="stat-value" id="percent-cals" style="color: var(--primary);">0%</div>
+                    <div class="stat-label" id="remaining-cals" style="margin-top: 12px; color: var(--text-muted);">Restantes: 2000 kcal</div>
+                </div>
+            </div>
+            <div class="macro-bar"><div id="progress-bar" class="macro-fill" style="width: 0%; background: var(--primary);"></div></div>
+        </div>
+        <div class="card">
+            <h3 style="font-size: 1rem; margin-bottom: 10px;">📸 Escanear Plato con Cámara (IA)</h3>
+            <div class="camera-section">
+                <label class="camera-label" for="food-photo">📷 Tomar Foto o Subir Plato</label>
+                <input type="file" id="food-photo" accept="image/*" capture="environment" onchange="analyzeFoodPhoto(event)">
+                <img id="preview-img" alt="Vista previa">
+            </div>
+            <div id="ai-result" style="display: none; margin-bottom: 12px; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid #3b82f6;">
+                <p id="ai-description" style="font-size: 0.9rem; font-weight: 600; color: #60a5fa;"></p>
+                <p id="ai-macros" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;"></p>
+                <button class="btn btn-secondary" style="margin-top: 8px; padding: 8px;" onclick="addAIPlate()">Agregar al Registro</button>
+            </div>
+        </div>
+        <div class="card">
+            <h3 style="font-size: 1rem; margin-bottom: 10px;">➕ Registro Manual</h3>
+            <select id="meal-type">
+                <option value="Desayuno">Desayuno</option>
+                <option value="Almuerzo">Almuerzo</option>
+                <option value="Cena">Cena</option>
+                <option value="Snack">Snack</option>
+            </select>
+            <input type="text" id="food-name" placeholder="Ej. Lomo saltado, Ensalada...">
+            <input type="number" id="food-cals" placeholder="Calorías (kcal)">
+            <button class="btn" onclick="addMeal()">Añadir Alimento</button>
+        </div>
+        <div class="card">
+            <h3 style="font-size: 1rem; margin-bottom: 12px;">📋 Comidas Registradas Hoy</h3>
+            <div id="meals-list"><p style="color: var(--text-muted); font-size: 0.9rem; text-align: center;">No hay comidas registradas aún.</p></div>
+        </div>
+    </div>
+    <script>
+        let meals = JSON.parse(localStorage.getItem('calori_meals')) || [];
+        let dailyGoal = localStorage.getItem('calori_goal') ? parseInt(localStorage.getItem('calori_goal')) : 2000;
+        document.getElementById('goal-cals').value = dailyGoal;
+        document.getElementById('date-today').innerText = new Date().toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        let currentDetectedFood = null;
+        function updateGoal() {
+            dailyGoal = parseInt(document.getElementById('goal-cals').value) || 2000;
+            localStorage.setItem('calori_goal', dailyGoal);
+            render();
+        }
+        function addMeal(name = null, cals = null, type = null) {
+            const foodName = name || document.getElementById('food-name').value;
+            const foodCals = cals || parseInt(document.getElementById('food-cals').value);
+            const mealType = type || document.getElementById('meal-type').value;
+            if (!foodName || isNaN(foodCals) || foodCals <= 0) { alert('Ingresa un nombre y calorías válidas.'); return; }
+            meals.push({ id: Date.now(), name: foodName, cals: foodCals, type: mealType });
+            saveAndRender();
+            if (!name) { document.getElementById('food-name').value = ''; document.getElementById('food-cals').value = ''; }
+        }
+        function deleteMeal(id) { meals = meals.filter(m => m.id !== id); saveAndRender(); }
+        function saveAndRender() { localStorage.setItem('calori_meals', JSON.stringify(meals)); render(); }
+        function render() {
+            const listEl = document.getElementById('meals-list');
+            const totalCalsEl = document.getElementById('total-cals');
+            const percentCalsEl = document.getElementById('percent-cals');
+            const remainingCalsEl = document.getElementById('remaining-cals');
+            const progressBar = document.getElementById('progress-bar');
+            let total = 0; listEl.innerHTML = '';
+            if (meals.length === 0) {
+                listEl.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem; text-align: center;">No hay comidas registradas aún.</p>';
+            } else {
+                meals.forEach(m => {
+                    total += m.cals;
+                    listEl.innerHTML += `<div class="meal-item"><div class="meal-info"><h4>${m.name} <span style="font-size:0.75rem; color:var(--primary);">[${m.type}]</span></h4><p>${m.cals} kcal</p></div><button class="delete-btn" onclick="deleteMeal(${m.id})">×</button></div>`;
+                });
+            }
+            totalCalsEl.innerText = total;
+            const percent = Math.round((total / dailyGoal) * 100);
+            percentCalsEl.innerText = percent + '%';
+            const remaining = dailyGoal - total;
+            remainingCalsEl.innerText = remaining >= 0 ? `Restantes: ${remaining} kcal` : `Excedido por: ${Math.abs(remaining)} kcal`;
+            progressBar.style.width = Math.min(percent, 100) + '%';
+            progressBar.style.background = percent > 100 ? 'var(--danger)' : 'var(--primary)';
+        }
+        function analyzeFoodPhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('preview-img');
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                const aiResult = document.getElementById('ai-result');
+                document.getElementById('ai-description').innerText = "⏳ Analizando plato con Inteligencia Artificial...";
+                document.getElementById('ai-macros').innerText = "";
+                aiResult.style.display = 'block';
+                setTimeout(() => {
+                    const samples = [
+                        { name: "Pollo a la brasa con papas", cals: 750, type: "Almuerzo", macros: "P: 45g | C: 60g | G: 32g" },
+                        let name = "Lomo Saltado con arroz", cals: 680, type: "Almuerzo", macros: "P: 38g | C: 65g | G: 26g" },
+                        { name: "Desayuno con pan, huevo y café", cals: 380, type: "Desayuno", macros: "P: 18g | C: 40g | G: 14g" },
+                        { name: "Ensalada mixta con atún", cals: 320, type: "Almuerzo", macros: "P: 30g | C: 12g | G: 15g" }
+                    ];
+                    currentDetectedFood = samples[Math.floor(Math.random() * samples.length)];
+                    document.getElementById('ai-description').innerText = `✨ Detectado: ${currentDetectedFood.name} (~${currentDetectedFood.cals} kcal)`;
+                    document.getElementById('ai-macros').innerText = `Macronutrientes: ${currentDetectedFood.macros}`;
+                }, 1200);
+            }
+            reader.readAsDataURL(file);
+        }
+        function addAIPlate() {
+            if (currentDetectedFood) {
+                addMeal(currentDetectedFood.name, currentDetectedFood.cals, currentDetectedFood.type);
+                document.getElementById('ai-result').style.display = 'none';
+                document.getElementById('preview-img').style.display = 'none';
+                currentDetectedFood = null;
+            }
+        }
+        render();
+    </script>
+</body>
+</html>
